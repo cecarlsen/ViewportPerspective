@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 66efefe7a19634a6ab54f7307641134a
+timeCreated: 1485949084
+licenseType: Pro
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - _blitShader: {fileID: 4800000, guid: 058622e3106ad46cf940c8e15e7cd55c, type: 3}
+  - _uiHandleShader: {fileID: 4800000, guid: 9b0ed82ff32c1d242adf01c8a069122d, type: 3}
+  - _uiLineShader: {fileID: 4800000, guid: bda7df45f9f98f24a994e8d39b2e024e, type: 3}
+  - _cornerTexture: {fileID: 2800000, guid: e9ce7f0e3359bae4c941d7929e024efc, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

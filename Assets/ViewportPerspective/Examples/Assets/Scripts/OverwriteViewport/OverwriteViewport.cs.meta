@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 55db80a1da3254d069e1b2a4bbb273b9
+timeCreated: 1486999819
+licenseType: Pro
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences:
+  - _texture: {instanceID: 0}
+  - _blitShader: {fileID: 4800000, guid: df0db94f28ffe4d2a9b26d10f987f474, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
