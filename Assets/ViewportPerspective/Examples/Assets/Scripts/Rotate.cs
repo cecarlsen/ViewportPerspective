@@ -1,8 +1,6 @@
 ﻿/*
-	Created by Carl Emil Carlsen.
-	Copyright 2017 Sixth Sensor.
-	All rights reserved.
-	http://sixthsensor.dk
+	Copyright © Carl Emil Carlsen 2018
+    http://cec.dk
 */
 
 using System.Collections;

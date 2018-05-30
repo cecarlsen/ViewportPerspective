@@ -1,8 +1,6 @@
 ﻿/*
-	Created by Carl Emil Carlsen.
-	Copyright 2017 Sixth Sensor.
-	All rights reserved.
-	http://sixthsensor.dk
+	Copyright © Carl Emil Carlsen 2018
+    http://cec.dk
 */
 
 using UnityEngine;
@@ -25,9 +23,11 @@ public class ViewportPerspective : MonoBehaviour
 {
 	[SerializeField] bool _interactable = false;
 	[SerializeField] bool _edgeAntialiasing = true;
+    [SerializeField] Color _backgroundColor = Color.black;
 	[SerializeField] SerializationMethod _runtimeSerialization = SerializationMethod.PlayerPrefs;
 	[SerializeField] KeyCode _interactableHotkey = KeyCode.P;
 	[SerializeField] KeyCode _resetHotkey = KeyCode.Backspace;
+    public Texture overrideSourceTexture;
 
 	[SerializeField][HideInInspector] string _saveKey;
 	[SerializeField][HideInInspector] Matrix4x4 _matrix;
@@ -55,6 +55,10 @@ public class ViewportPerspective : MonoBehaviour
 	Vector2[] _quadOffset = new Vector2[]{ new Vector2(-0.5f,-0.5f), new Vector2(-0.5f,0.5f), new Vector2(0.5f,0.5f), new Vector2(0.5f,-0.5f) };
 	Mesh _uiLineMesh;
 	Vector3[] _uiLineVertices = new Vector3[4+4]; // Cross hair plus screen edges.
+
+    int _matrixPropId;
+    int _gridSizePropId;
+    int _backgroundColorPropId;
 
 	static readonly Vector2[] _sourcePoints = new []{
 		new Vector2( 0, 0 ),
@@ -132,6 +136,18 @@ public class ViewportPerspective : MonoBehaviour
 		}
 	}
 
+    /// <summary>
+	/// Background color.
+	/// </summary>
+	public Color backgroundColor {
+		get { return _backgroundColor; }
+		set {
+			_backgroundColor = value;
+			if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
+			_blitMaterial.SetColor( _backgroundColorPropId, _backgroundColor );
+		}
+	}
+    
 
 	/// <summary>
 	/// Resets the perspective.
@@ -180,6 +196,11 @@ public class ViewportPerspective : MonoBehaviour
 			
 		// Prepare for runtime.
 		if( Application.isPlaying && !_preparedForRuntime ) PrepareForRuntime();
+
+        // Get shader propery IDs.
+        _matrixPropId = Shader.PropertyToID( "_Matrix" );
+        _gridSizePropId = Shader.PropertyToID( "_GridSize" );
+        _backgroundColorPropId = Shader.PropertyToID( "_ClearColor" );
 	}
 
 
@@ -216,20 +237,20 @@ public class ViewportPerspective : MonoBehaviour
 
 		if( !_preparedForRuntime ) PrepareForRuntime();
 
-		if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty("_Matrix") ) ){
+		if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty(_matrixPropId) ) ){
 			ViewportPerspectiveTools.Math.FindHomography( _sourcePoints, _cornerPoints, ref _matrix );
-			_blitMaterial.SetMatrix( "_Matrix", _matrix );
+			_blitMaterial.SetMatrix( _matrixPropId, _matrix );
 			_isDirty = false;
 		}
 
 		if( Application.isPlaying && _interactable ){
 			int tileCountX, tileCountY;
 			if( !GetAspectComponents( _cam.aspect, out tileCountX, out tileCountY ) ) tileCountX = tileCountY = 10;
-			_blitMaterial.SetVector( "_GridSize", new Vector2( tileCountX, tileCountY ) );
+			_blitMaterial.SetVector( _gridSizePropId, new Vector2( tileCountX, tileCountY ) );
 		}
 
 		Graphics.Blit( null, dest, _blitMaterial, 0 );		// Clear background.
-		Graphics.Blit( source, dest, _blitMaterial, 1 );	// Render with perspective.
+		Graphics.Blit( overrideSourceTexture ? overrideSourceTexture : source, dest, _blitMaterial, 1 );	// Render with perspective.
 	}
 	 
 	 
@@ -243,6 +264,7 @@ public class ViewportPerspective : MonoBehaviour
 	{ 
 		interactable = _interactable;
 		edgeAntialiasing = _edgeAntialiasing;
+        backgroundColor = _backgroundColor;
 	}
 
 

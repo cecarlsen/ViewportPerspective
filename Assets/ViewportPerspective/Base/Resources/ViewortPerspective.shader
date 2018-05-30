@@ -1,7 +1,7 @@
-// 	Created by Carl Emil Carlsen.
-//	Copyright 2017 Sixth Sensor.
-//	All rights reserved.
-//	http://sixthsensor.dk
+/*
+    Copyright © Carl Emil Carlsen 2018
+    http://cec.dk
+*/
 
 Shader "Hidden/ViewportPerspective"
 {
@@ -17,9 +17,8 @@ Shader "Hidden/ViewportPerspective"
 	#pragma multi_compile SHOW_TEXTURE SHOW_GRID
 	#pragma multi_compile __ ANTIALIASING
 
-	uniform sampler2D _MainTex;
-	uniform float4x4 _Matrix;
-
+	sampler2D _MainTex;
+	float4x4 _Matrix;
 	float2 _GridSize;
 
 	static const float GRID_THICKNESS = 1.2;
@@ -77,17 +76,17 @@ Shader "Hidden/ViewportPerspective"
 	{
 		float4 col = tex2D( _MainTex, i.uv );
 
-		#if defined( SHOW_GRID )
-		float grid = compute_grid( i.uv );
-		col = col * 0.5 + grid;
+		#ifdef SHOW_GRID
+			float grid = compute_grid( i.uv );
+			col = col * 0.5 + grid;
 		#endif
 
-		#if defined( ANTIALIASING )
-		float2 pos = i.uv + 0.5;
-		float2 f  = abs( frac( pos ) - 0.5 );
-		float2 df = fwidth( pos ) * 0.7;
-		float2 e  = smoothstep( -df, df, f );
-		col.rgb *= saturate( e.x * e.y );
+		#ifdef ANTIALIASING
+			float2 pos = i.uv + 0.5;
+			float2 f  = abs( frac( pos ) - 0.5 );
+			float2 df = fwidth( pos ) * 0.7;
+			float2 e  = smoothstep( -df, df, f );
+			col.rgb *= saturate( e.x * e.y );
 		#endif
 
 		return col;

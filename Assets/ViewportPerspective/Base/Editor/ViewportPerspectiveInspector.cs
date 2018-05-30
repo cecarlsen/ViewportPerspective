@@ -1,8 +1,6 @@
 ﻿/*
-	Created by Carl Emil Carlsen.
-	Copyright 2017 Sixth Sensor.
-	All rights reserved.
-	http://sixthsensor.dk
+	Copyright © Carl Emil Carlsen 2018
+    http://cec.dk
 */
 
 using UnityEngine;
@@ -15,6 +13,8 @@ public class ViewportPerspectiveInspector : Editor
 {
 	SerializedProperty _interactable;
 	SerializedProperty _edgeAntialiasing;
+    SerializedProperty _backgroundColor;
+    SerializedProperty overrideSourceTexture;
 	SerializedProperty _runtimeSerialization;
 	SerializedProperty _interactableHotkey;
 	SerializedProperty _resetHotkey;
@@ -26,6 +26,8 @@ public class ViewportPerspectiveInspector : Editor
 	{
 		_interactable = serializedObject.FindProperty( "_interactable" );
 		_edgeAntialiasing = serializedObject.FindProperty( "_edgeAntialiasing" );
+        _backgroundColor = serializedObject.FindProperty( "_backgroundColor" );
+        overrideSourceTexture = serializedObject.FindProperty( "overrideSourceTexture" );
 		_runtimeSerialization = serializedObject.FindProperty( "_runtimeSerialization" );
 		_interactableHotkey = serializedObject.FindProperty( "_interactableHotkey" );
 		_resetHotkey = serializedObject.FindProperty( "_resetHotkey" );
@@ -38,8 +40,9 @@ public class ViewportPerspectiveInspector : Editor
 		serializedObject.Update();
 
 		EditorGUILayout.PropertyField( _interactable );
-
 		EditorGUILayout.PropertyField( _edgeAntialiasing );
+        EditorGUILayout.PropertyField( _backgroundColor );
+        EditorGUILayout.PropertyField( overrideSourceTexture );
 
 		EditorGUI.BeginDisabledGroup( Application.isPlaying );
 		EditorGUILayout.PropertyField( _runtimeSerialization );
