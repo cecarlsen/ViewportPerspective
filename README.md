@@ -5,7 +5,7 @@ ViewportPerspective
 
 Camera image effect for adjusting the viewport perspective using four corner handles.
 
-Updated for Unity 2017.2.
+Updated for Unity 2018.1.
 
 Use cases
 ---------
@@ -22,7 +22,7 @@ Use cases
 
 Features
 --------
-- Supports Windows and OSX. 
+- Supports Windows and OSX.
 - Works well with multidisplay adapters like Matrox Dual- and TrippleHead2Go.
 - Multidisplay (Windows player only)
 - Runtime UI.
@@ -38,6 +38,6 @@ Features
 License
 -------
 
-Copyright (C) 2017 Carl Emil Carlsen
+Copyright (C) 2018 Carl Emil Carlsen
 
 [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html)
