@@ -36,18 +36,20 @@ public class ViewportPerspective : MonoBehaviour
 
 	[SerializeField][HideInInspector] bool _hotkeyFold;
 
+    // Rendering
 	bool _isDirty = true;
 	bool _preparedForRuntime = false;
-	static Texture2D _cornerTexture;
-	 
 	Camera _cam;
+    CommandBuffer _blitCommands;
 	
+    // Interaction.
 	int _selectedIndex = -1;
 	int _hoveredIndex = -1;
 	Vector3 _multiDisplayOffset;
-
 	KeyValuePair<ViewportPerspective,Camera>[] _otherViewsLookups; // Other ViewportPerspective scripts rendering to the same display.
 
+    // UI rendering.
+	static Texture2D _cornerTexture;
 	CommandBuffer _uiRenderCommands;
 	Mesh _handleMesh;
 	Vector3[] _handleVertices = new Vector3[4*4];
@@ -56,10 +58,6 @@ public class ViewportPerspective : MonoBehaviour
 	Mesh _uiLineMesh;
 	Vector3[] _uiLineVertices = new Vector3[4+4]; // Cross hair plus screen edges.
 
-    int _matrixPropId;
-    int _gridSizePropId;
-    int _backgroundColorPropId;
-
 	static readonly Vector2[] _sourcePoints = new []{
 		new Vector2( 0, 0 ),
 		new Vector2( 0, 1 ),
@@ -67,30 +65,15 @@ public class ViewportPerspective : MonoBehaviour
 		new Vector2( 1, 0 )
 	};
 
-	const string saveKeyBase = "ViewportPerspective";
-	const string logPrepend = "<b>[ViewportPerspective]</b> ";
 	const string shaderMissingMessage = "Shader is missing. Ensure that shaders are located in 'ViewportPerspective/Base/Resources'.";
 	const string textureMissingMessage = "Texture is missing. Ensure that texture exists in 'ViewportPerspective/Base/Resources'.";
 
-	const float aspect_16_9 = 16/9f;
-	const float aspect_9_16 = 9/16f;
-	const float aspect_16_10 = 16/10f;
-	const float aspect_10_16 = 10/16f;
-	const float aspect_4_3 = 4/3f;
-	const float aspect_3_4 = 3/4f;
-	const float aspect_5_4 = 5/4f;
-	const float aspect_4_5 = 4/5f;
-	const float aspect_3_2 = 3/2f;
-	const float aspect_2_3 = 2/3f;
-	const float aspect_2_1 = 2/1f;
-	const float aspect_1_2 = 1/2f;
-
 	const float handleSizeMult = 0.08f;
 
-	string blitShaderName = "Hidden/ViewportPerspective";
-	string uiHandleShaderName = "Hidden/ViewportPerspectiveUIHandle";
-	string uiLineShaderName = "Hidden/ViewportPerspectiveUILine";
-	string handleTextureName = "ViewportPerspectiveHandle";
+	const string blitShaderName = "Hidden/ViewportPerspective";
+	const string uiHandleShaderName = "Hidden/ViewportPerspectiveUIHandle";
+	const string uiLineShaderName = "Hidden/ViewportPerspectiveUILine";
+	const string handleTextureName = "ViewportPerspectiveHandle";
 
 	static readonly Color32 idleColor = Color.white;
 	static readonly Color32 hoverColor = Color.white;
@@ -107,6 +90,7 @@ public class ViewportPerspective : MonoBehaviour
 			_interactable = value;
 
 			if( !Application.isPlaying ) return;
+            if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
 			if( !_preparedForRuntime ) PrepareForRuntime();
 
 			if( _interactable ) {
@@ -144,11 +128,10 @@ public class ViewportPerspective : MonoBehaviour
 		set {
 			_backgroundColor = value;
 			if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
-			_blitMaterial.SetColor( _backgroundColorPropId, _backgroundColor );
+			_blitMaterial.SetColor( ShaderIDs.backgroundColorPropId, _backgroundColor );
 		}
 	}
     
-
 	/// <summary>
 	/// Resets the perspective.
 	/// </summary>
@@ -161,7 +144,6 @@ public class ViewportPerspective : MonoBehaviour
 		_isDirty = true;
 	}
 
-
 	/// <summary>
 	/// Gets a corner at index in Unity viewport space; lower-left (0,0) upper-right (1,1). Index order: lower-left, upper-left, upper-right, lower-right.
 	/// </summary>
@@ -170,7 +152,6 @@ public class ViewportPerspective : MonoBehaviour
 		if( index < 0 || index > 3 ) return Vector2.zero;
 		return _cornerPoints[index] * 0.5f + new Vector2(0.5f,0.5f); // Clip space to viewport space.
 	}
-
 
 	/// <summary>
 	/// Sets a corner at index in Unity viewport space; lower-left (0,0) upper-right (1,1). Index order: lower-left, upper-left, upper-right, lower-right.
@@ -182,8 +163,17 @@ public class ViewportPerspective : MonoBehaviour
 		_isDirty = true;
 	}
 
+	string streamingAssetFilePath { get { return Application.streamingAssetsPath + "/" + GetType().Name + "/" + name + ".dat"; } }
 
-	string streamingAssetPath { get { return Application.streamingAssetsPath + "/" + this.GetType().Name + "/" + name + ".dat"; } }
+    string logPrepend { get { return "<b>[" + GetType().Name + "]</b> "; } }
+
+
+    static class ShaderIDs
+    {
+        public static readonly int matrixPropId = Shader.PropertyToID( "_Matrix" );
+        public static readonly int gridSizePropId = Shader.PropertyToID( "_GridSize" );
+        public static readonly int backgroundColorPropId = Shader.PropertyToID( "_ClearColor" );
+    }
 
 
 	void Awake()
@@ -196,16 +186,33 @@ public class ViewportPerspective : MonoBehaviour
 			
 		// Prepare for runtime.
 		if( Application.isPlaying && !_preparedForRuntime ) PrepareForRuntime();
-
-        // Get shader propery IDs.
-        _matrixPropId = Shader.PropertyToID( "_Matrix" );
-        _gridSizePropId = Shader.PropertyToID( "_GridSize" );
-        _backgroundColorPropId = Shader.PropertyToID( "_ClearColor" );
 	}
 
 
-	void Update()
+
+    void OnEnable()
+    {
+        if( !_cam ) _cam = GetComponent<Camera>();
+        if( !_cam ) return;
+
+        if( _blitCommands == null ){
+            _blitCommands = new CommandBuffer();
+            _blitCommands.name = GetType().Name;
+        }
+        _cam.AddCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
+    }
+
+
+    void OnDisable()
+    {
+        if( _cam ) _cam.RemoveCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
+    }
+
+
+    void Update()
 	{
+        if( !_cam ) return;
+
 		// Only update in runtime.
 		if( !Application.isPlaying ) return;
 
@@ -230,29 +237,45 @@ public class ViewportPerspective : MonoBehaviour
 		}
 	}
 
-	 
-	void OnRenderImage( RenderTexture source, RenderTexture dest )
-	{
-		if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
 
-		if( !_preparedForRuntime ) PrepareForRuntime();
+    void LateUpdate()
+    {
+        if( !_cam ) return;
 
-		if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty(_matrixPropId) ) ){
+        // Update perspective.
+        if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty( ShaderIDs.matrixPropId ) ) ){
 			ViewportPerspectiveTools.Math.FindHomography( _sourcePoints, _cornerPoints, ref _matrix );
-			_blitMaterial.SetMatrix( _matrixPropId, _matrix );
+			_blitMaterial.SetMatrix( ShaderIDs.matrixPropId, _matrix );
 			_isDirty = false;
 		}
 
-		if( Application.isPlaying && _interactable ){
+        // Update aspect.
+        if( Application.isPlaying && _interactable ){
 			int tileCountX, tileCountY;
 			if( !GetAspectComponents( _cam.aspect, out tileCountX, out tileCountY ) ) tileCountX = tileCountY = 10;
-			_blitMaterial.SetVector( _gridSizePropId, new Vector2( tileCountX, tileCountY ) );
+			_blitMaterial.SetVector( ShaderIDs.gridSizePropId, new Vector2( tileCountX, tileCountY ) );
 		}
 
-		Graphics.Blit( null, dest, _blitMaterial, 0 );		// Clear background.
-		Graphics.Blit( overrideSourceTexture ? overrideSourceTexture : source, dest, _blitMaterial, 1 );	// Render with perspective.
-	}
-	 
+        // Reconstruct command buffer.
+        RenderTargetIdentifier targetID = new RenderTargetIdentifier( BuiltinRenderTextureType.CameraTarget );
+        _blitCommands.Clear();
+        if( overrideSourceTexture ){
+            _blitCommands.SetRenderTarget( targetID );
+            _blitCommands.ClearRenderTarget( false, true, _backgroundColor );
+            _blitCommands.Blit( overrideSourceTexture, targetID, _blitMaterial, 1 );
+        } else {
+            RenderTextureDescriptor tempDescriptor = new RenderTextureDescriptor( _cam.pixelWidth, _cam.pixelHeight, RenderTextureFormat.ARGB32, 0 );
+            const int tempName = 938;
+            RenderTargetIdentifier tempID = new RenderTargetIdentifier( tempName );
+            _blitCommands.GetTemporaryRT( tempName, tempDescriptor, FilterMode.Bilinear );
+            _blitCommands.Blit( targetID, tempID ); // Copy using bliy. Can´t use CopyTexture because buffer formats need to be compatible.
+            _blitCommands.SetRenderTarget( targetID );
+            _blitCommands.ClearRenderTarget( false, true, _backgroundColor );
+            _blitCommands.Blit( tempID, targetID, _blitMaterial, 1 );
+            _blitCommands.ReleaseTemporaryRT( tempName );
+        }
+    }
+	
 	 
 	void OnApplicationQuit()
 	{
@@ -278,7 +301,7 @@ public class ViewportPerspective : MonoBehaviour
 			if( values.Length == 8 ) for( int c=0; c<4; c++ ) _cornerPoints[c] = new Vector2( float.Parse( values[c*2] ), float.Parse( values[c*2+1] ) );
 			return true;
 		case SerializationMethod.StreamingAssets:
-			Data data = Data.Deserialize( streamingAssetPath );
+			Data data = Data.Deserialize( streamingAssetFilePath );
 			if( data == null || data.corners.Length == 0 ) return false;
 			_cornerPoints = data.corners;
 			return true;
@@ -299,7 +322,7 @@ public class ViewportPerspective : MonoBehaviour
 		case SerializationMethod.StreamingAssets:
 			Data data = new Data();
 			data.corners = _cornerPoints;
-			data.Serialize( streamingAssetPath );
+			data.Serialize( streamingAssetFilePath );
 			break;
 		}
 	}
@@ -391,10 +414,9 @@ public class ViewportPerspective : MonoBehaviour
 	}
 
 
-
 	string GetUniqueSaveKey()
 	{
-		return saveKeyBase + " " + System.Guid.NewGuid().ToString();
+		return GetType().Name + " " + Guid.NewGuid().ToString();
 	}
 
 
@@ -521,6 +543,19 @@ public class ViewportPerspective : MonoBehaviour
 
 	static bool GetAspectComponents( float aspect, out int x, out int y )
 	{
+        const float aspect_16_9 = 16/9f;
+	    const float aspect_9_16 = 9/16f;
+	    const float aspect_16_10 = 16/10f;
+	    const float aspect_10_16 = 10/16f;
+	    const float aspect_4_3 = 4/3f;
+	    const float aspect_3_4 = 3/4f;
+	    const float aspect_5_4 = 5/4f;
+	    const float aspect_4_5 = 4/5f;
+	    const float aspect_3_2 = 3/2f;
+	    const float aspect_2_3 = 2/3f;
+	    const float aspect_2_1 = 2/1f;
+	    const float aspect_1_2 = 1/2f;
+
 		if( Almost( aspect, 1 ) )					{ x = 10; y = 10; }
 		else if( Almost( aspect, aspect_16_9 ) )	{ x = 16; y = 9; }
 		else if( Almost( aspect, aspect_9_16 ) )	{ x = 9; y = 16; }

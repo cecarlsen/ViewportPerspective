@@ -6,8 +6,8 @@
 Shader "Hidden/ViewportPerspective"
 {
 	Properties {
-		_MainTex ("Base (RGB)", 2D) = "white" {}
-		_ClearColor ("Clear Color", Color) = (0,0,0,1)
+		_MainTex ("", 2D) = "white" {}
+		_ClearColor ("", Color) = (0,0,0,1)
 	}
 
 
@@ -20,24 +20,25 @@ Shader "Hidden/ViewportPerspective"
 	sampler2D _MainTex;
 	float4x4 _Matrix;
 	float2 _GridSize;
+	float4 _ClearColor;
 
 	static const float GRID_THICKNESS = 1.2;
 
 
-	struct vertexInput {
+	struct ToVert {
 		float4 vertex : POSITION;
 		half2 uv : TEXCOORD0;
 	};
 
 
-	struct fragInput {
+	struct ToFrag {
 		float4 pos : POSITION;
 		float2 uv : TEXCOORD0;
 	};
 
 
 
-	float compute_grid( float2 uv )
+	float ComputeGrid( float2 uv )
 	{
 		// Grid.
 		float2 pos = uv * _GridSize;
@@ -63,22 +64,28 @@ Shader "Hidden/ViewportPerspective"
 	}
 
 
-	fragInput vert( vertexInput v )
+	ToFrag Vert( ToVert v )
 	{
-		fragInput o;
+		ToFrag o;
+
 		o.pos = mul( _Matrix, v.vertex );
 		o.uv = v.uv.xy;
+
+		#if UNITY_UV_STARTS_AT_TOP
+			o.uv.y = 1-o.uv.y;
+		 #endif
+
 		return o;
 	}
 
 
-	fixed4 frag( fragInput i ) : COLOR
+	fixed4 Frag( ToFrag i ) : COLOR
 	{
 		float4 col = tex2D( _MainTex, i.uv );
 
 		#ifdef SHOW_GRID
-			float grid = compute_grid( i.uv );
-			col = col * 0.5 + grid;
+			float grid = ComputeGrid( i.uv );
+			col = col + grid;
 		#endif
 
 		#ifdef ANTIALIASING
@@ -86,12 +93,11 @@ Shader "Hidden/ViewportPerspective"
 			float2 f  = abs( frac( pos ) - 0.5 );
 			float2 df = fwidth( pos ) * 0.7;
 			float2 e  = smoothstep( -df, df, f );
-			col.rgb *= saturate( e.x * e.y );
+			col.rgb = lerp( col.rgb, _ClearColor.rgb, 1-saturate( e.x * e.y ) );
 		#endif
 
 		return col;
 	}
-
 
 
 	ENDCG
@@ -120,8 +126,8 @@ Shader "Hidden/ViewportPerspective"
 		Pass
 		{
 			CGPROGRAM
-			#pragma vertex vert
-			#pragma fragment frag
+			#pragma vertex Vert
+			#pragma fragment Frag
 			ENDCG
 		}
 	}
