@@ -1,11 +1,10 @@
 ﻿/*
-	Copyright © Carl Emil Carlsen 2018
-    http://cec.dk
+	Copyright © Carl Emil Carlsen 2018-2021
+	http://cec.dk
 */
 
 using UnityEngine;
 using UnityEditor;
-using System.Collections;
 
 [CustomEditor(typeof(ViewportPerspective))]
 [CanEditMultipleObjects]
@@ -13,8 +12,8 @@ public class ViewportPerspectiveInspector : Editor
 {
 	SerializedProperty _interactable;
 	SerializedProperty _edgeAntialiasing;
-    SerializedProperty _backgroundColor;
-    SerializedProperty overrideSourceTexture;
+	SerializedProperty _backgroundColor;
+	SerializedProperty overrideSourceTexture;
 	SerializedProperty _runtimeSerialization;
 	SerializedProperty _interactableHotkey;
 	SerializedProperty _resetHotkey;
@@ -26,8 +25,8 @@ public class ViewportPerspectiveInspector : Editor
 	{
 		_interactable = serializedObject.FindProperty( "_interactable" );
 		_edgeAntialiasing = serializedObject.FindProperty( "_edgeAntialiasing" );
-        _backgroundColor = serializedObject.FindProperty( "_backgroundColor" );
-        overrideSourceTexture = serializedObject.FindProperty( "overrideSourceTexture" );
+		_backgroundColor = serializedObject.FindProperty( "_backgroundColor" );
+		overrideSourceTexture = serializedObject.FindProperty( "overrideSourceTexture" );
 		_runtimeSerialization = serializedObject.FindProperty( "_runtimeSerialization" );
 		_interactableHotkey = serializedObject.FindProperty( "_interactableHotkey" );
 		_resetHotkey = serializedObject.FindProperty( "_resetHotkey" );
@@ -41,8 +40,8 @@ public class ViewportPerspectiveInspector : Editor
 
 		EditorGUILayout.PropertyField( _interactable );
 		EditorGUILayout.PropertyField( _edgeAntialiasing );
-        EditorGUILayout.PropertyField( _backgroundColor );
-        EditorGUILayout.PropertyField( overrideSourceTexture );
+		EditorGUILayout.PropertyField( _backgroundColor );
+		EditorGUILayout.PropertyField( overrideSourceTexture );
 
 		EditorGUI.BeginDisabledGroup( Application.isPlaying );
 		EditorGUILayout.PropertyField( _runtimeSerialization );

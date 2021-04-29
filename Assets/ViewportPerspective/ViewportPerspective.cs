@@ -1,6 +1,6 @@
 ﻿/*
-	Copyright © Carl Emil Carlsen 2018
-    http://cec.dk
+	Copyright © Carl Emil Carlsen 2018-2021
+	http://cec.dk
 */
 
 using UnityEngine;
@@ -9,7 +9,6 @@ using System;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Collections;
 using System.Collections.Generic;
 
 /// <summary>
@@ -23,11 +22,11 @@ public class ViewportPerspective : MonoBehaviour
 {
 	[SerializeField] bool _interactable = false;
 	[SerializeField] bool _edgeAntialiasing = true;
-    [SerializeField] Color _backgroundColor = Color.black;
+	[SerializeField] Color _backgroundColor = Color.black;
 	[SerializeField] SerializationMethod _runtimeSerialization = SerializationMethod.PlayerPrefs;
 	[SerializeField] KeyCode _interactableHotkey = KeyCode.P;
 	[SerializeField] KeyCode _resetHotkey = KeyCode.Backspace;
-    public Texture overrideSourceTexture;
+	public Texture overrideSourceTexture;
 
 	[SerializeField][HideInInspector] string _saveKey;
 	[SerializeField][HideInInspector] Matrix4x4 _matrix;
@@ -36,19 +35,19 @@ public class ViewportPerspective : MonoBehaviour
 
 	[SerializeField][HideInInspector] bool _hotkeyFold;
 
-    // Rendering
+	// Rendering
 	bool _isDirty = true;
 	bool _preparedForRuntime = false;
 	Camera _cam;
-    CommandBuffer _blitCommands;
+	CommandBuffer _blitCommands;
 	
-    // Interaction.
+	// Interaction.
 	int _selectedIndex = -1;
 	int _hoveredIndex = -1;
 	Vector3 _multiDisplayOffset;
 	KeyValuePair<ViewportPerspective,Camera>[] _otherViewsLookups; // Other ViewportPerspective scripts rendering to the same display.
 
-    // UI rendering.
+	// UI rendering.
 	static Texture2D _cornerTexture;
 	CommandBuffer _uiRenderCommands;
 	Mesh _handleMesh;
@@ -90,7 +89,7 @@ public class ViewportPerspective : MonoBehaviour
 			_interactable = value;
 
 			if( !Application.isPlaying ) return;
-            if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
+			if( !_blitMaterial && !TryCreateBlitMaterial() ) return;
 			if( !_preparedForRuntime ) PrepareForRuntime();
 
 			if( _interactable ) {
@@ -120,7 +119,7 @@ public class ViewportPerspective : MonoBehaviour
 		}
 	}
 
-    /// <summary>
+	/// <summary>
 	/// Background color.
 	/// </summary>
 	public Color backgroundColor {
@@ -131,7 +130,7 @@ public class ViewportPerspective : MonoBehaviour
 			_blitMaterial.SetColor( ShaderIDs.backgroundColorPropId, _backgroundColor );
 		}
 	}
-    
+	
 	/// <summary>
 	/// Resets the perspective.
 	/// </summary>
@@ -165,15 +164,15 @@ public class ViewportPerspective : MonoBehaviour
 
 	string streamingAssetFilePath { get { return Application.streamingAssetsPath + "/" + GetType().Name + "/" + name + ".dat"; } }
 
-    string logPrepend { get { return "<b>[" + GetType().Name + "]</b> "; } }
+	string logPrepend { get { return "<b>[" + GetType().Name + "]</b> "; } }
 
 
-    static class ShaderIDs
-    {
-        public static readonly int matrixPropId = Shader.PropertyToID( "_Matrix" );
-        public static readonly int gridSizePropId = Shader.PropertyToID( "_GridSize" );
-        public static readonly int backgroundColorPropId = Shader.PropertyToID( "_ClearColor" );
-    }
+	static class ShaderIDs
+	{
+		public static readonly int matrixPropId = Shader.PropertyToID( "_Matrix" );
+		public static readonly int gridSizePropId = Shader.PropertyToID( "_GridSize" );
+		public static readonly int backgroundColorPropId = Shader.PropertyToID( "_ClearColor" );
+	}
 
 
 	void Awake()
@@ -190,28 +189,28 @@ public class ViewportPerspective : MonoBehaviour
 
 
 
-    void OnEnable()
-    {
-        if( !_cam ) _cam = GetComponent<Camera>();
-        if( !_cam ) return;
-
-        if( _blitCommands == null ){
-            _blitCommands = new CommandBuffer();
-            _blitCommands.name = GetType().Name;
-        }
-        _cam.AddCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
-    }
-
-
-    void OnDisable()
-    {
-        if( _cam ) _cam.RemoveCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
-    }
-
-
-    void Update()
+	void OnEnable()
 	{
-        if( !_cam ) return;
+		if( !_cam ) _cam = GetComponent<Camera>();
+		if( !_cam ) return;
+
+		if( _blitCommands == null ){
+			_blitCommands = new CommandBuffer();
+			_blitCommands.name = GetType().Name;
+		}
+		_cam.AddCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
+	}
+
+
+	void OnDisable()
+	{
+		if( _cam ) _cam.RemoveCommandBuffer( CameraEvent.AfterImageEffects, _blitCommands );
+	}
+
+
+	void Update()
+	{
+		if( !_cam ) return;
 
 		// Only update in runtime.
 		if( !Application.isPlaying ) return;
@@ -238,43 +237,43 @@ public class ViewportPerspective : MonoBehaviour
 	}
 
 
-    void LateUpdate()
-    {
-        if( !_cam ) return;
+	void LateUpdate()
+	{
+		if( !_cam ) return;
 
-        // Update perspective.
-        if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty( ShaderIDs.matrixPropId ) ) ){
+		// Update perspective.
+		if( _isDirty || ( Application.isEditor && !_blitMaterial.HasProperty( ShaderIDs.matrixPropId ) ) ){
 			ViewportPerspectiveTools.Math.FindHomography( _sourcePoints, _cornerPoints, ref _matrix );
 			_blitMaterial.SetMatrix( ShaderIDs.matrixPropId, _matrix );
 			_isDirty = false;
 		}
 
-        // Update aspect.
-        if( Application.isPlaying && _interactable ){
+		// Update aspect.
+		if( Application.isPlaying && _interactable ){
 			int tileCountX, tileCountY;
 			if( !GetAspectComponents( _cam.aspect, out tileCountX, out tileCountY ) ) tileCountX = tileCountY = 10;
 			_blitMaterial.SetVector( ShaderIDs.gridSizePropId, new Vector2( tileCountX, tileCountY ) );
 		}
 
-        // Reconstruct command buffer.
-        RenderTargetIdentifier targetID = new RenderTargetIdentifier( BuiltinRenderTextureType.CameraTarget );
-        _blitCommands.Clear();
-        if( overrideSourceTexture ){
-            _blitCommands.SetRenderTarget( targetID );
-            _blitCommands.ClearRenderTarget( false, true, _backgroundColor );
-            _blitCommands.Blit( overrideSourceTexture, targetID, _blitMaterial, 1 );
-        } else {
-            RenderTextureDescriptor tempDescriptor = new RenderTextureDescriptor( _cam.pixelWidth, _cam.pixelHeight, RenderTextureFormat.ARGB32, 0 );
-            const int tempName = 938;
-            RenderTargetIdentifier tempID = new RenderTargetIdentifier( tempName );
-            _blitCommands.GetTemporaryRT( tempName, tempDescriptor, FilterMode.Bilinear );
-            _blitCommands.Blit( targetID, tempID ); // Copy using bliy. Can´t use CopyTexture because buffer formats need to be compatible.
-            _blitCommands.SetRenderTarget( targetID );
-            _blitCommands.ClearRenderTarget( false, true, _backgroundColor );
-            _blitCommands.Blit( tempID, targetID, _blitMaterial, 1 );
-            _blitCommands.ReleaseTemporaryRT( tempName );
-        }
-    }
+		// Reconstruct command buffer.
+		RenderTargetIdentifier targetID = new RenderTargetIdentifier( BuiltinRenderTextureType.CameraTarget );
+		_blitCommands.Clear();
+		if( overrideSourceTexture ){
+			_blitCommands.SetRenderTarget( targetID );
+			_blitCommands.ClearRenderTarget( false, true, _backgroundColor );
+			_blitCommands.Blit( overrideSourceTexture, targetID, _blitMaterial, 1 );
+		} else {
+			RenderTextureDescriptor tempDescriptor = new RenderTextureDescriptor( _cam.pixelWidth, _cam.pixelHeight, RenderTextureFormat.ARGB32, 0 );
+			const int tempName = 938;
+			RenderTargetIdentifier tempID = new RenderTargetIdentifier( tempName );
+			_blitCommands.GetTemporaryRT( tempName, tempDescriptor, FilterMode.Bilinear );
+			_blitCommands.Blit( targetID, tempID ); // Copy using bliy. Can´t use CopyTexture because buffer formats need to be compatible.
+			_blitCommands.SetRenderTarget( targetID );
+			_blitCommands.ClearRenderTarget( false, true, _backgroundColor );
+			_blitCommands.Blit( tempID, targetID, _blitMaterial, 1 );
+			_blitCommands.ReleaseTemporaryRT( tempName );
+		}
+	}
 	
 	 
 	void OnApplicationQuit()
@@ -287,7 +286,7 @@ public class ViewportPerspective : MonoBehaviour
 	{ 
 		interactable = _interactable;
 		edgeAntialiasing = _edgeAntialiasing;
-        backgroundColor = _backgroundColor;
+		backgroundColor = _backgroundColor;
 	}
 
 
@@ -543,18 +542,18 @@ public class ViewportPerspective : MonoBehaviour
 
 	static bool GetAspectComponents( float aspect, out int x, out int y )
 	{
-        const float aspect_16_9 = 16/9f;
-	    const float aspect_9_16 = 9/16f;
-	    const float aspect_16_10 = 16/10f;
-	    const float aspect_10_16 = 10/16f;
-	    const float aspect_4_3 = 4/3f;
-	    const float aspect_3_4 = 3/4f;
-	    const float aspect_5_4 = 5/4f;
-	    const float aspect_4_5 = 4/5f;
-	    const float aspect_3_2 = 3/2f;
-	    const float aspect_2_3 = 2/3f;
-	    const float aspect_2_1 = 2/1f;
-	    const float aspect_1_2 = 1/2f;
+		const float aspect_16_9 = 16/9f;
+		const float aspect_9_16 = 9/16f;
+		const float aspect_16_10 = 16/10f;
+		const float aspect_10_16 = 10/16f;
+		const float aspect_4_3 = 4/3f;
+		const float aspect_3_4 = 3/4f;
+		const float aspect_5_4 = 5/4f;
+		const float aspect_4_5 = 4/5f;
+		const float aspect_3_2 = 3/2f;
+		const float aspect_2_3 = 2/3f;
+		const float aspect_2_1 = 2/1f;
+		const float aspect_1_2 = 1/2f;
 
 		if( Almost( aspect, 1 ) )					{ x = 10; y = 10; }
 		else if( Almost( aspect, aspect_16_9 ) )	{ x = 16; y = 9; }
@@ -581,7 +580,7 @@ public class ViewportPerspective : MonoBehaviour
 	}
 
 
-	[System.Serializable]
+	[Serializable]
 	public class Data
 	{
 		[NonSerialized] public Vector2[] corners = new Vector2[0];
@@ -593,7 +592,7 @@ public class ViewportPerspective : MonoBehaviour
 		{
 			// Ensure we have a directory.
 			string dataDirectoryPath = filePath.Substring( 0, filePath.LastIndexOf( '/' ) );
-			if( !System.IO.Directory.Exists( dataDirectoryPath ) ) System.IO.Directory.CreateDirectory( dataDirectoryPath );
+			if( !Directory.Exists( dataDirectoryPath ) ) Directory.CreateDirectory( dataDirectoryPath );
 
 			// Convert non-serializable.
 			_corners = new float[corners.Length*2];

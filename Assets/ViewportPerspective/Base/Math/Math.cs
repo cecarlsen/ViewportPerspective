@@ -1,5 +1,5 @@
 ﻿/*
- 	Original code released in 2010 by Arturo Castro with GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007.
+ 	Original code released in 2010 by Arturo Castro under GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007.
  	https://github.com/camilosw/ofxVideoMapping/blob/master/src/homography.h
 	https://github.com/camilosw/ofxVideoMapping/blob/master/LICENSE
 
@@ -7,10 +7,9 @@
 	https://github.com/brianchasalow
 
 	Included in ViewportPerspective by Carl Emil Carlsen, 01/03/2017.
-	http://sixthsensor.dk
+	http://cec.dk
 */
 
-using System.Collections;
 using UnityEngine;
 
 namespace ViewportPerspectiveTools

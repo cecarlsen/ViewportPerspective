@@ -5,7 +5,7 @@ ViewportPerspective
 
 Camera image effect for adjusting the viewport perspective using four corner handles.
 
-Updated for Unity 2018.1.
+Updated for Unity 2020.3 (LTS).
 
 Use cases
 ---------
