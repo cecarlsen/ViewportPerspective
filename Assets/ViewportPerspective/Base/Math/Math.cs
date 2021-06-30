@@ -34,7 +34,7 @@ namespace ViewportPerspectiveTools
 			// after ordering the terms it gives the following matrix
 			// that can be solved with gaussian elimination:
 
-			float[] p = new float[72]{
+			float[] P = new float[72]{
 				-src[0].x, 	-src[0].y, -1,  0,  0, 0,	src[0].x*dst[0].x, src[0].y*dst[0].x, -dst[0].x,	// h11
 				0,   0,  0, -src[0].x, -src[0].y, -1, 	src[0].x*dst[0].y, src[0].y*dst[0].y, -dst[0].y,	// h12
 				-src[1].x,  -src[1].y, -1,  0,  0,  0,	src[1].x*dst[1].x, src[1].y*dst[1].x, -dst[1].x,	// h13
@@ -46,31 +46,34 @@ namespace ViewportPerspectiveTools
 
 			};
 
-			GaussianElimination( p, 9 );
+			float[] Pbefore = new float[72];
+			for(int i = 0; i < Pbefore.Length; i++) Pbefore[i] = P[i];
 
-			transformMatrix[0,0] = p[8];
-			transformMatrix[0,1] = p[17];
+			P = GaussianElimination(P,9);
+
+			transformMatrix[0,0] = P[8];
+			transformMatrix[0,1] = P[17];
 			transformMatrix[0,2] = 0;
-			transformMatrix[0,3] = p[26];
+			transformMatrix[0,3] = P[26];
 								   
-			transformMatrix[1,0] = p[35];
-			transformMatrix[1,1] = p[44];
+			transformMatrix[1,0] = P[35];
+			transformMatrix[1,1] = P[44];
 			transformMatrix[1,2] = 0;
-			transformMatrix[1,3] = p[53];
+			transformMatrix[1,3] = P[53];
 								   
 			transformMatrix[2,0] = 0;
 			transformMatrix[2,1] = 0;
 			transformMatrix[2,2] = 0;
 			transformMatrix[2,3] = 0;
 								   
-			transformMatrix[3,0] = p[62];
-			transformMatrix[3,1] = p[71];
+			transformMatrix[3,0] = P[62];
+			transformMatrix[3,1] = P[71];
 			transformMatrix[3,2] = 0;
 			transformMatrix[3,3] = 1;
 		}
 
 
-		public static void GaussianElimination( float[] A, int n )
+		public static float[] GaussianElimination( float[] A, int n )
 		{
 			// http://en.wikipedia.org/wiki/Gaussian_elimination
 
@@ -111,6 +114,7 @@ namespace ViewportPerspectiveTools
 
 			// Back substitution.
 			for( i=m-2; i>=0; i-- ) for( j=i+1; j<n-1; j++ ) A[i*n+m] -= A[i*n+j] * A[j*n+m];
+			return A;
 		}
 	}
 }

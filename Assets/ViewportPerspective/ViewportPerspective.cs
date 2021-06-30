@@ -24,16 +24,17 @@ public class ViewportPerspective : MonoBehaviour
 	[SerializeField] bool _edgeAntialiasing = true;
 	[SerializeField] Color _backgroundColor = Color.black;
 	[SerializeField] SerializationMethod _runtimeSerialization = SerializationMethod.PlayerPrefs;
+	[SerializeField] string _fileNameWithoutExtension = string.Empty;
 	[SerializeField] KeyCode _interactableHotkey = KeyCode.P;
 	[SerializeField] KeyCode _resetHotkey = KeyCode.Backspace;
 	public Texture overrideSourceTexture;
 
-	[SerializeField][HideInInspector] string _saveKey;
-	[SerializeField][HideInInspector] Matrix4x4 _matrix;
-	[SerializeField][HideInInspector] Material _blitMaterial;
-	[SerializeField][HideInInspector] Vector2[] _cornerPoints = new Vector2[4];	// Clip space (0,0) t0 (1,1)
+	[SerializeField,HideInInspector] string _playerPrefsKey;
+	[SerializeField,HideInInspector] Matrix4x4 _matrix;
+	[SerializeField,HideInInspector] Material _blitMaterial;
+	[SerializeField,HideInInspector] Vector2[] _cornerPoints = new Vector2[4];	// Clip space (0,0) t0 (1,1)
 
-	[SerializeField][HideInInspector] bool _hotkeyFold;
+	[SerializeField,HideInInspector] bool _hotkeyFold;
 
 	// Rendering
 	bool _isDirty = true;
@@ -130,7 +131,18 @@ public class ViewportPerspective : MonoBehaviour
 			_blitMaterial.SetColor( ShaderIDs.backgroundColorPropId, _backgroundColor );
 		}
 	}
-	
+
+
+	public string fileNameWithoutExtension {
+		get { return _fileNameWithoutExtension; }
+		set {
+			_fileNameWithoutExtension = value;
+			if( string.IsNullOrEmpty( _fileNameWithoutExtension ) ) _fileNameWithoutExtension = name;
+			if( !TryLoadRuntimeSettings() ) Reset();
+		}
+	}
+
+
 	/// <summary>
 	/// Resets the perspective.
 	/// </summary>
@@ -162,7 +174,11 @@ public class ViewportPerspective : MonoBehaviour
 		_isDirty = true;
 	}
 
-	string streamingAssetFilePath { get { return Application.streamingAssetsPath + "/" + GetType().Name + "/" + name + ".dat"; } }
+	string streamingAssetFilePath {
+		get {
+			return Application.streamingAssetsPath + "/" + nameof( ViewportPerspective ) + "/" + _fileNameWithoutExtension + ".dat";
+		}
+	}
 
 	string logPrepend { get { return "<b>[" + GetType().Name + "]</b> "; } }
 
@@ -178,15 +194,21 @@ public class ViewportPerspective : MonoBehaviour
 	void Awake()
 	{
 		// Ensure that we have a save key.
-		if( string.IsNullOrEmpty( _saveKey ) ) _saveKey = GetUniqueSaveKey();
+		if( string.IsNullOrEmpty( _playerPrefsKey ) ) _playerPrefsKey = GetUniqueSaveKey();
 
-		// Load settings or reset.
-		if( !TryLoadRuntimeSettings() ) Reset();
-			
+		// Ensure we have a file name.
+		if( string.IsNullOrEmpty( _fileNameWithoutExtension ) ) _fileNameWithoutExtension = name;
+
 		// Prepare for runtime.
 		if( Application.isPlaying && !_preparedForRuntime ) PrepareForRuntime();
 	}
 
+
+	void Start()
+	{
+		// Load settings or reset.
+		if( !TryLoadRuntimeSettings() ) Reset();		
+	}
 
 
 	void OnEnable()
@@ -292,18 +314,19 @@ public class ViewportPerspective : MonoBehaviour
 
 	bool TryLoadRuntimeSettings()
 	{
-		switch( _runtimeSerialization ){
-		case SerializationMethod.None: return false;
-		case SerializationMethod.PlayerPrefs:
-			if( !PlayerPrefs.HasKey( _saveKey ) ) return false;
-			string[] values = PlayerPrefs.GetString( _saveKey ).Split( ' ' );
-			if( values.Length == 8 ) for( int c=0; c<4; c++ ) _cornerPoints[c] = new Vector2( float.Parse( values[c*2] ), float.Parse( values[c*2+1] ) );
-			return true;
-		case SerializationMethod.StreamingAssets:
-			Data data = Data.Deserialize( streamingAssetFilePath );
-			if( data == null || data.corners.Length == 0 ) return false;
-			_cornerPoints = data.corners;
-			return true;
+		switch( _runtimeSerialization )
+		{
+			case SerializationMethod.None: return false;
+			case SerializationMethod.PlayerPrefs:
+				if( !PlayerPrefs.HasKey( _playerPrefsKey ) ) return false;
+				string[] values = PlayerPrefs.GetString( _playerPrefsKey ).Split( ' ' );
+				if( values.Length == 8 ) for( int c=0; c<4; c++ ) _cornerPoints[c] = new Vector2( float.Parse( values[c*2] ), float.Parse( values[c*2+1] ) );
+				return true;
+			case SerializationMethod.StreamingAssets:
+				Data data = Data.Deserialize( streamingAssetFilePath );
+				if( data == null || data.corners.Length == 0 ) return false;
+				_cornerPoints = data.corners;
+				return true;
 		}
 		return false;
 	}
@@ -311,18 +334,19 @@ public class ViewportPerspective : MonoBehaviour
 
 	void SaveRuntimeSettings()
 	{
-		switch( _runtimeSerialization ){
-		case SerializationMethod.PlayerPrefs:
-			if( string.IsNullOrEmpty( _saveKey ) ) _saveKey = GetUniqueSaveKey();
-			string values = "";
-			for( int c=0; c<4; c++ ) values += ( c==0 ? "" : " " ) + _cornerPoints[c].x + " " + _cornerPoints[c].y;
-			PlayerPrefs.SetString( _saveKey, values );
-			break;
-		case SerializationMethod.StreamingAssets:
-			Data data = new Data();
-			data.corners = _cornerPoints;
-			data.Serialize( streamingAssetFilePath );
-			break;
+		switch( _runtimeSerialization )
+		{
+			case SerializationMethod.PlayerPrefs:
+				if( string.IsNullOrEmpty( _playerPrefsKey ) ) _playerPrefsKey = GetUniqueSaveKey();
+				string values = "";
+				for( int c=0; c<4; c++ ) values += ( c==0 ? "" : " " ) + _cornerPoints[c].x + " " + _cornerPoints[c].y;
+				PlayerPrefs.SetString( _playerPrefsKey, values );
+				break;
+			case SerializationMethod.StreamingAssets:
+				Data data = new Data();
+				data.corners = _cornerPoints;
+				data.Serialize( streamingAssetFilePath );
+				break;
 		}
 	}
 
@@ -415,7 +439,7 @@ public class ViewportPerspective : MonoBehaviour
 
 	string GetUniqueSaveKey()
 	{
-		return GetType().Name + " " + Guid.NewGuid().ToString();
+		return nameof( ViewportPerspective ) + " " + Guid.NewGuid().ToString();
 	}
 
 

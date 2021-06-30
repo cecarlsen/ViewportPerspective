@@ -72,7 +72,7 @@ Shader "Hidden/ViewportPerspective"
 		o.uv = v.uv.xy;
 
 		#if UNITY_UV_STARTS_AT_TOP
-			o.uv.y = 1-o.uv.y;
+			//o.uv.y = 1-o.uv.y;
 		 #endif
 
 		return o;
